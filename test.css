@@ -1,0 +1,44 @@
+.tile {
+    display: inline-block;
+    width: 2em;
+    height: 2em;
+    text-align: center;
+    line-height: 2em;
+    vertical-align: center;    
+    border: 5px outset lightblue;
+    background: white;
+
+    /* unselectable */
+    -webkit-touch-callout: none;
+      -webkit-user-select: none;
+       -khtml-user-select: none;
+         -moz-user-select: none;
+          -ms-user-select: none;
+              user-select: none;
+    /* end unselectable */
+}
+.tile.active {
+    border: 5px inset lightblue;
+}
+.board {
+    border: 10px outset lightgreen;    
+    padding: 5px;
+    background: lightgreen;
+    display: inline-block;
+}
+.tile .inner {
+    display: block;
+    height: 100%;
+    width: 100%;    
+}
+.tile.allowed {
+    background: #cccccc;
+}
+.tile.allowed.word {
+    background: gray;
+}
+div.word-container {
+    font-size: 200%;
+    font-weight: bold;
+    font-family: sans-serif;
+}
