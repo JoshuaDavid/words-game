@@ -32,6 +32,41 @@ function createLettersFollowingFn(words) {
     return lettersFollowing;
 }
 function Board(height, width) {
+    if(height instanceof Array) {
+        var board = this;
+        var rows = height;
+        board.height = rows.length;
+        if(board.height) board.width = rows[0].length;    
+        for(var y = 0; y < board.height; y++) {
+            this[y] = [];
+            for(var x = 0; x < board.width; x++) {
+                this[y][x] = new Tile(rows[y][x]);
+            }
+        }
+    }
+    else if(typeof height === "string") {
+        var lines = height.split(/[\r\n]+/g);
+        var board = this;
+        board.height = lines.length;
+        board.width = lines[0].length;
+        for(var y = 0; y < board.height; y++) {
+            this[y] = [];
+            for(var x = 0; x < board.width; x++) {
+                this[y][x] = new Tile(lines[y][x]);
+            }
+        }
+    }
+    else {
+        var board = this;
+        board.height = height;
+        board.width = width;
+        for(var y = 0; y < board.height; y++) {
+            this[y] = [];
+            for(var x = 0; x < board.width; x++) {
+                this[y][x] = new Tile();
+            }
+        }
+    }
     currentWord = [];
     currentWord.to_S = function() {
         var str = "";
@@ -40,17 +75,8 @@ function Board(height, width) {
         }
         return str;
     }
-    var board = this;
-    board.height = height;
-    board.width = width;
-    for(var y = 0; y < height; y++) {
-        this[y] = [];
-        for(var x = 0; x < width; x++) {
-            this[y][x] = new Tile();
-        }
-    }
-    for(var y = 0; y < height; y++) {
-        for(var x = 0; x < width; x++) {
+    for(var y = 0; y < board.height; y++) {
+        for(var x = 0; x < board.width; x++) {
             var tile = this[y][x];
             for(var dx = -1; dx <= 1; dx++) {
                 for(var dy = -1; dy <= 1; dy++) {
@@ -67,6 +93,13 @@ function Board(height, width) {
         for(var i = 0; i < activeTiles.length; i++) {
             activeTiles[i].classList.remove("active");
         }
+        if(isWord(currentWord.to_S())) {
+            for(var i = 0; i < currentWord.length; i++) {
+                currentWord[i].content = '_';
+            }
+            board.collapse();
+            board.DOMElement = board.to_HTML();
+        }
         currentWord = [];
         currentWord.to_S = function() {
             var str = "";
@@ -74,6 +107,37 @@ function Board(height, width) {
                 str += this[i].content;    
             }
             return str;
+        }
+    }
+    board.collapse = function() {
+        for(var i = 0; i < board.height; i++) {
+            for(var y = board.height - 1; y > 0; y--) {
+                for(var x = board.width - 1; x >= 0; x--) {
+                    if(board[y][x].content == '_') {
+                        board[y][x].content = board[y-1][x].content;
+                        board[y-1][x].content = '_';
+                    }
+                }
+            }
+            for(var x = 0; x < board.width; x++) {
+                var hasContent = false;
+                for(var y = 0; y < board.height; y++) {
+                    if(board[y][x].content != '_') {
+                        hasContent = true;    
+                    }
+                }
+                if(!hasContent) {
+                    for(var y = 0; y < board.height; y++) {
+                        if(x + 1 < board.width) {
+                            board[y][x].content = board[y][x+1].content;
+                            board[y][x+1].content = '_';
+                        }
+                        else {
+                            board[y][x].content =  '_';
+                        }
+                    }
+                }
+            }
         }
     }
     function addTileToWord(tile) {
@@ -85,7 +149,7 @@ function Board(height, width) {
         removedTile.toggleTile();
         wordHolder.setWord(getWord());
         var lastLetter = currentWord[currentWord.length - 1];
-        lastLetter.highlightAllowableNeighbors();
+        //lastLetter.highlightAllowableNeighbors();
         return removedTile;
     }
     function getWord() {
@@ -94,24 +158,31 @@ function Board(height, width) {
     function getWordTiles() {
         return currentWord;
     }
-    this.__defineGetter__('to_HTML', to_HTML);
+    this.to_HTML = to_HTML;
+    this.DOMElement = null;
     function to_HTML() {
-        var node = document.createElement("div");
-        for(var y = 0; y < height; y++) {
+        var node = this.DOMElement || document.createElement("div");
+        node.innerHTML = '';
+        for(var y = 0; y < board.height; y++) {
             var row = document.createElement("div");
             row.setAttribute("class", "row");
-            for(var x = 0; x < width; x++) {
+            row.innerHTML = '\n';
+            for(var x = 0; x < board.width; x++) {
                 row.appendChild(board[y][x].to_HTML);
                 board[y][x].getWord = getWord;
                 board[y][x].getWordTiles = getWordTiles;
                 board[y][x].addTileToWord = addTileToWord;
                 board[y][x].removeTileFromWord = removeTileFromWord;
             }
+            row.addEventListener("mousedown", stopProp);
+            row.addEventListener("mouseout", stopProp);
+            row.addEventListener("mouseover", stopProp);
             node.appendChild(row);
             node.setAttribute("class", "board");
             node.addEventListener("mouseup", enterWord);
             node.addEventListener("mouseout", enterWord);
         }
+        this.DOMElement = node;
         return node;
     }
 }
@@ -122,30 +193,27 @@ function Tile(content) {
     tileObj.neighbors = [];
     tileObj.active = false;
     var board = null;
-    this.getAllowableNeighbors = getAllowableNeighbors;
-    this.getPossibleWords = getPossibleWords;
-    this.highlightAllowableNeighbors = highlightAllowableNeighbors;
-    function getAllowableNextLetters(word) {
-        var anls = [];
-        if(!word) var word = tileObj.getWord();
-        var tree = lettersFollowing(word);
-        for(var key in tree) {
-            if(tree.hasOwnProperty(key)) {
-                var letter = key;
-                anls.push(letter);    
+    tileObj.getPossibleWords =  function(wordTiles, r) {
+        function getAllowableNextLetters(word) {
+            var anls = [];
+            if(!word) var word = tileObj.getWord();
+            var tree = lettersFollowing(word);
+            for(var key in tree) {
+                if(tree.hasOwnProperty(key)) {
+                    var letter = key;
+                    anls.push(letter);    
+                }
             }
+            return anls;
         }
-        return anls;
-    }
-    function getPossibleWords(wordTiles, r) {
         if(r === undefined) {
             r = 20;
             var beginning = true;
             possibleWords = [];
         }
         var allowableNeighbors = [];
-        if(!wordTiles) var wordTiles = tileObj.getWordTiles()
-        var word = wordTiles.map(function(tile) {return tile.content}).join('')
+        if(!wordTiles) var wordTiles = tileObj.getWordTiles();
+        var word = wordTiles.map(function(tile) {return tile.content}).join('');
         var anls = getAllowableNextLetters(word);
         var neighbors = tileObj.neighbors;
         for(var i = 0; i < neighbors.length; i++) {
@@ -178,46 +246,16 @@ function Tile(content) {
         }
         return allowableNeighbors;
     }
-    function getAllowableNeighbors() {
-        var allowableNeighbors = [];
-        if(!word) var word = tileObj.getWord();
-        var anls = getAllowableNextLetters(word);
-        var neighbors = tileObj.neighbors;
-        for(var i = 0; i < neighbors.length; i++) {
-            var neighbor = neighbors[i];
-            if(anls.indexOf(neighbor.content) >= 0) {
-                if(!neighbor.active) {
-                    allowableNeighbors.push(neighbor);
-                } 
-            }    
-        }
-        return allowableNeighbors;
-    }
-    function highlightAllowableNeighbors() {
-        clearHighlighted();
-        var allowableNeighbors = tileObj.getAllowableNeighbors();
-        var word = tileObj.getWord();
-        for(var i = 0; i < allowableNeighbors.length; i++) {
-            var neighbor = allowableNeighbors[i];
-            var newWord = word + neighbor.content;
-            if(isWord(newWord)) neighbor.allowAndIsWord();
-            else neighbor.allow();
-        }
-    }
     tileObj.__defineGetter__("to_HTML", function () {
         var tile = document.createElement("div");
         var inner = document.createElement("span");
         inner.classList.add('inner');
-        inner.innerHTML = content;
+        inner.innerHTML = tileObj.content;
         tile.classList.add("tile");
         tile.addEventListener("mouseout", stopProp);
         tile.addEventListener("mouseover", stopProp);
         inner.addEventListener("mousedown", toggleTile);
         inner.addEventListener("mouseover", toggleTile);
-        function stopProp(e) {
-            e.stopPropagation();
-            return false;
-        }
         function allow() {
             tile.classList.add("allowed");    
         }
@@ -238,7 +276,7 @@ function Tile(content) {
                 else {
                     tileObj.removeTileFromWord();
                 }
-                highlightAllowableNeighbors();
+                //highlightAllowableNeighbors();
             }
             return false;
         }
@@ -307,6 +345,10 @@ function getWordHolder() {
 function isWord(word) {
     return popWords.indexOf(word) >= 0;
 }
+function stopProp(e) {
+    e.stopPropagation();
+    return false;
+}
 function generateAnalyzer() {
     var container = document.createElement('div');
     var analyzer = document.createElement('button');
@@ -372,7 +414,13 @@ function analyzeBoard() {
             var wordCol = document.createElement("td");
             lengthCol.innerHTML = i;
             if(wordsByLength[i]) {
-                wordCol.innerHTML = wordsByLength[i].join(', ');
+                wordList = document.createElement("ul");
+                wordsByLength[i].sort().forEach(function(word) {
+                    wordLi = document.createElement("li");
+                    wordLi.innerHTML = word;
+                    wordList.appendChild(wordLi);
+                });
+                wordCol.appendChild(wordList);
                 row.appendChild(lengthCol);
                 row.appendChild(wordCol);
                 table.appendChild(row);
@@ -388,10 +436,36 @@ document.addEventListener("readystatechange", function(e) {
 });
 var popWords = words.filter(isPopWord).sort();
 var lettersFollowing = createLettersFollowingFn(popWords);
-board = new Board(4, 4);
+var letters = 
+"ehsdidne\n"+
+"jtaeribt\n"+
+"onoshbti\n"+
+"lhhtottd\n"+
+"aghatutp\n"+
+"shlifnha\n"+
+"fnorrieb\n"+
+"dmazhnha";
+/*
+*/
+board = new Board(letters);
 wordHolder = getWordHolder();
 function onDocumentReady() {
-    document.body.appendChild(board.to_HTML);
+    document.body.innerHTML = "";
+    document.body.appendChild(board.to_HTML());
     document.body.appendChild(wordHolder);
     document.body.appendChild(generateAnalyzer());
+    var applyButton = document.createElement("button");
+    applyButton.innerHTML = "Create Game";
+    var textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    document.body.appendChild(applyButton);
+    textarea.rows = 8;
+    textarea.cols = 8;
+    applyButton.addEventListener('click', applyToBoard);
+    function applyToBoard() {
+        var boardStr = textarea.value;
+        board = new Board(boardStr);
+        onDocumentReady();
+        textarea.innerHTML = boardStr;
+    }
 }
