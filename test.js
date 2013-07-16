@@ -1,11 +1,46 @@
+function getSimpleFile(filename) {
+    var FS = null;
+    var popWordTreeF = null;
+    var simpleFile = {read: function(){}, writer: null, stringValue: null};
+    var StorageInfo = StorageInfo || webkitStorageInfo;
+    var requestFileSystem = requestFileSystem || webkitRequestFileSystem;
+    function whenBytesGranted(grantedBytes) {
+        function onSuccess(fs) {
+            FS = fs;
+            FS.root.getFile(filename, {create: true}, function(f) {
+                f.createWriter(function(w) { simpleFile.writer = w;});
+                f.file(function(blob) {
+                    var reader = new FileReader();
+                    simpleFile.read = function(callback) {
+                        reader.readAsText(blob);
+                        reader.onloadend = function() {
+                            simpleFile.stringValue = reader.result;
+                            callback(simpleFile.stringValue);
+                        };
+                    };
+                }, function(e) {console.log(e)});
+            });
+        }
+        function onError(e) {
+            console.error(e);
+        }
+        requestFileSystem(PERSISTENT, 10000000, onSuccess, onError);
+    }
+    webkitStorageInfo.requestQuota(PERSISTENT, 10<<20, whenBytesGranted);
+    return simpleFile;
+}
+var wordsGameFile = getSimpleFile('words-game.txt');
+while(!wordsGameFile.read);
+var popWordTree = null;
+wordsGameFile.read(function(stringValue) {
+    popWordTree = JSON.parse(stringValue);
+})
 function isPopWord(word) {
     return (/^[a-z][a-z][a-z]+$/g).test(word) 
 }
-function isWord(word) {
-    isWordCallCount += 1;
-    return popWords.indexOf(word) >= 0;
-}
+function isWord() {}
 function createLettersFollowingFn(words) {
+    var wordFlag = '@';
     function treeify(words, r) {
         var tree = {};
         for(var i = 0; i < words.length; i++) {
@@ -13,11 +48,11 @@ function createLettersFollowingFn(words) {
             var tail = words[i].slice(1);
             if(!tree[head]) tree[head] = [];
             if(head && tail) tree[head].push(tail);
-            if(head && !tail) tree.isWord = true;
+            if(head && !tail) tree[wordFlag] = 1;
         }
         if(r) {
             for(var branch in tree) {
-                if(tree.hasOwnProperty(branch) && branch !== "isWord") {
+                if(tree.hasOwnProperty(branch) && branch !== wordFlag) {
                     tree[branch] = treeify(tree[branch], r - 1);
                 }
             }
@@ -31,20 +66,22 @@ function createLettersFollowingFn(words) {
             if(possibilities[letter]) possibilities = possibilities[letter];
             else return [];
         }
-        delete possibilities["isWord"];
+        delete possibilities[wordFlag];
         return possibilities;
     }
     isWord = function(word) {
-        isWordCallCount += 1;
         var possibilities = tree;
         for(var i = 0; i < word.length; i++) {
             var letter = word[i];
             if(possibilities[letter]) possibilities = possibilities[letter];
             else return [];
         }
-        return possibilities["isWord"];
+        return possibilities[wordFlag];
     }
-    var tree = treeify(words, 22);
+    console.log("treeifying words", new Date().getTime());
+    if(popWordTree) var tree = popWordTree;
+    else var tree = treeify(words, 22);
+    console.log("words treeified", new Date().getTime());
     popWordTree = tree;
     return lettersFollowing;
 }
@@ -105,7 +142,6 @@ function Board(height, width) {
         }
     }
     function enterWord(e) {
-        clearHighlighted();
         var activeTiles = document.querySelectorAll(".active");
         for(var i = 0; i < activeTiles.length; i++) {
             activeTiles[i].classList.remove("active");
@@ -203,7 +239,6 @@ function Board(height, width) {
         return node;
     }
 }
-var isWordCallCount = 0;
 function Tile(content) {
     if(!content) content = randomLetter();
     var tileObj = this;
@@ -225,7 +260,7 @@ function Tile(content) {
             return anls;
         }
         if(r === undefined) {
-            r = 3;
+            r = 20;
             var beginning = true;
             possibleWords = [];
         }
@@ -454,6 +489,7 @@ document.addEventListener("readystatechange", function(e) {
 });
 var popWords = words.filter(isPopWord).sort();
 var lettersFollowing = createLettersFollowingFn(popWords);
+delete popWords;
 var letters = 
 "ehsdidne\n"+
 "jtaeribt\n"+

@@ -60,7 +60,7 @@ div.word-container {
 .results-display table td li {
     display: inline-block;
     margin: 0em 0.5%;
-    width: 19%;
+    width: 9%;
     box-sizing: border-box;
     //border: 1px solid black;
 }
