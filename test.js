@@ -1,6 +1,10 @@
 function isPopWord(word) {
     return (/^[a-z][a-z][a-z]+$/g).test(word) 
 }
+function isWord(word) {
+    isWordCallCount += 1;
+    return popWords.indexOf(word) >= 0;
+}
 function createLettersFollowingFn(words) {
     function treeify(words, r) {
         var tree = {};
@@ -8,11 +12,12 @@ function createLettersFollowingFn(words) {
             var head = words[i][0];
             var tail = words[i].slice(1);
             if(!tree[head]) tree[head] = [];
-            if(head && tail) tree[head].push(tail)
+            if(head && tail) tree[head].push(tail);
+            if(head && !tail) tree.isWord = true;
         }
         if(r) {
             for(var branch in tree) {
-                if(tree.hasOwnProperty(branch)) {
+                if(tree.hasOwnProperty(branch) && branch !== "isWord") {
                     tree[branch] = treeify(tree[branch], r - 1);
                 }
             }
@@ -26,9 +31,21 @@ function createLettersFollowingFn(words) {
             if(possibilities[letter]) possibilities = possibilities[letter];
             else return [];
         }
+        delete possibilities["isWord"];
         return possibilities;
     }
+    isWord = function(word) {
+        isWordCallCount += 1;
+        var possibilities = tree;
+        for(var i = 0; i < word.length; i++) {
+            var letter = word[i];
+            if(possibilities[letter]) possibilities = possibilities[letter];
+            else return [];
+        }
+        return possibilities["isWord"];
+    }
     var tree = treeify(words, 22);
+    popWordTree = tree;
     return lettersFollowing;
 }
 function Board(height, width) {
@@ -186,6 +203,7 @@ function Board(height, width) {
         return node;
     }
 }
+var isWordCallCount = 0;
 function Tile(content) {
     if(!content) content = randomLetter();
     var tileObj = this;
@@ -201,18 +219,18 @@ function Tile(content) {
             for(var key in tree) {
                 if(tree.hasOwnProperty(key)) {
                     var letter = key;
-                    anls.push(letter);    
+                    anls.push(letter);
                 }
             }
             return anls;
         }
         if(r === undefined) {
-            r = 20;
+            r = 3;
             var beginning = true;
             possibleWords = [];
         }
         var allowableNeighbors = [];
-        if(!wordTiles) var wordTiles = tileObj.getWordTiles();
+        if(!wordTiles) var wordTiles = [tileObj.content];
         var word = wordTiles.map(function(tile) {return tile.content}).join('');
         var anls = getAllowableNextLetters(word);
         var neighbors = tileObj.neighbors;
@@ -230,9 +248,9 @@ function Tile(content) {
             var newWordTiles = wordTiles.slice(0, wordTiles.length);
             newWordTiles.push(neighbor);
             var newWord = word + nc;
-            if(isWord(newWord)) {
-                if(newWord.length >= 3) {
-                    if(possibleWords.indexOf(newWord) === -1) {
+            if(newWord.length >= 3) {
+                if(possibleWords.indexOf(newWord) === -1) {
+                    if(isWord(newWord)) {
                         possibleWords.push(newWord);
                     }    
                 }
@@ -342,9 +360,6 @@ function getWordHolder() {
     }
     return node;
 }
-function isWord(word) {
-    return popWords.indexOf(word) >= 0;
-}
 function stopProp(e) {
     e.stopPropagation();
     return false;
@@ -362,6 +377,7 @@ function generateAnalyzer() {
     return container;
 }
 function analyzeBoard() {
+    var startTime = new Date().getTime();
     var progress = document.createElement("meter");
     document.body.appendChild(progress);
     var allPossibleWords = [];
@@ -427,6 +443,8 @@ function analyzeBoard() {
             }
         }
         progress.parentNode.removeChild(progress);
+        var endTime = new Date().getTime();
+        console.log("Analysis took " + (endTime - startTime) * 0.001 + " seconds.");
     }
 }
 document.addEventListener("readystatechange", function(e) {
