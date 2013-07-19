@@ -7,7 +7,7 @@ body {
     text-align: center;
     line-height: 2em;
     vertical-align: center;    
-    border: 5px outset lightblue;
+    //border: 1px outset lightblue;
     background: white;
     border-radius: 1em;
     margin: 1px;
@@ -22,12 +22,12 @@ body {
     /* end unselectable */
 }
 .tile.active {
-    border: 5px inset lightblue;
+    border: 1px inset lightblue;
 }
 .board {
-    border: 10px outset lightgreen;    
+    //border: 1px outset lightgreen;    
     padding: 5px;
-    background: #ccffcc;
+    /*background: #ccffcc;*/
     display: inline-block;
     border-radius: 1em;
 }
@@ -59,8 +59,10 @@ div.word-container {
 }
 .results-display table td li {
     display: inline-block;
-    margin: 0em 0.1em;
-    border: 1px solid black;
+    margin: 0em 0.5%;
+    width: 9%;
+    box-sizing: border-box;
+    //border: 1px solid black;
 }
 textarea {
     font-family: monospace;    
