@@ -1,4 +1,10 @@
 *.swp
+<<<<<<< Updated upstream
 images/*
 *.jpg
 *.png
+=======
+*.png
+*.jpg
+images/*
+>>>>>>> Stashed changes

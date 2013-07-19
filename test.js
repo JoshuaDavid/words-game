@@ -44,6 +44,7 @@ function createLettersFollowingFn(words) {
     function treeify(words, r) {
         var tree = {};
         for(var i = 0; i < words.length; i++) {
+<<<<<<< Updated upstream
             var head = words[i][0];
             var tail = words[i].slice(1);
             if(!tree[head]) tree[head] = [];
@@ -54,8 +55,19 @@ function createLettersFollowingFn(words) {
             for(var branch in tree) {
                 if(tree.hasOwnProperty(branch) && branch !== wordFlag) {
                     tree[branch] = treeify(tree[branch], r - 1);
+=======
+            var word = words[i];
+            var letters = word.split('');
+            var subtree = tree;
+            for(var l = 0; l < letters.length; l++) {
+                var letter = letters[l];
+                if(!subtree[letter]) {
+                    subtree[letter] = {};
+>>>>>>> Stashed changes
                 }
+                subtree = subtree[letter];
             }
+            subtree[wordFlag] = true;
         }
         return tree;
     }
@@ -70,6 +82,7 @@ function createLettersFollowingFn(words) {
         return possibilities;
     }
     isWord = function(word) {
+<<<<<<< Updated upstream
         var possibilities = tree;
         for(var i = 0; i < word.length; i++) {
             var letter = word[i];
@@ -83,6 +96,25 @@ function createLettersFollowingFn(words) {
     else var tree = treeify(words, 22);
     console.log("words treeified", new Date().getTime());
     popWordTree = tree;
+=======
+        var letters = word.split('');
+        var subtree = tree;
+        for(var l = 0; l < letters.length; l++) {
+            var letter = letters[l];
+            var subtree = subtree[letter];
+            if(!subtree) {
+                return false;
+            }
+        }
+        if(subtree[wordFlag]) {
+            return true
+        }
+        else {
+            return false;
+        }
+    }
+    var tree = treeify(words, 22);
+>>>>>>> Stashed changes
     return lettersFollowing;
 }
 function Board(height, width) {
