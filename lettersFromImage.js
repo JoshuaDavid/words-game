@@ -1,5 +1,25 @@
 var popWordTree = null;
 function getPopWordTree(successCallback, failureCallback) {
+    var script = document.createElement('script');
+    script.src = './popWordTree.js';
+    checkIfLoaded();
+    function checkIfLoaded() {
+        var appended = false;
+        if(document.head && !appended) {
+            document.head.appendChild(script);
+            appended = true;
+            if(!popWordTree) {
+                setTimeout(checkIfLoaded, 100);
+            }
+            else if(treemaker) {
+                treemaker.terminate();
+                successCallback(popWordTree);
+                if(imageLoader && imageLoader.classList) {
+                    imageLoader.classList.remove('hidden');
+                }
+            }
+        }
+    }
     if(Worker) {
         var treemaker = new Worker('./treemaker.js');
         treemaker.postMessage({wordFlag: '@'});
@@ -214,7 +234,8 @@ function diffCount(cnv1, cnv2) {
     return diffCt;
 }
 function allowImageUpload(successCallback) {
-    var imageLoader = document.createElement('input');
+    imageLoader = document.createElement('input');
+    imageLoader.classList.add('hidden');
     imageLoader.type = "file";
     document.body.appendChild(imageLoader);
     imageLoader.addEventListener('change', onImageLoad);
@@ -226,15 +247,12 @@ function allowImageUpload(successCallback) {
             var dataURL = e.target.result;
             readUploadedImage(dataURL, successCallback);
             var img = document.createElement('img');
-            document.body.appendChild(img);
+            //document.body.appendChild(img);
             img.src = dataURL;
             img.width = 100;
         }
         reader.readAsDataURL(file);
     }
-}
-function log(x) {
-    console.log(x);
 }
 window.addEventListener('load', function() {
     allowImageUpload(displayBoard);
@@ -585,7 +603,6 @@ function analyzeBoard() {
     var done = 0;
     function next(y, x) {
         var tile = board[y][x];
-        console.log(tile);
         var possibleWords = tile.getPossibleWords();
         allPossibleWords = allPossibleWords.concat(possibleWords);
         done++;
@@ -610,7 +627,6 @@ function analyzeBoard() {
                 bestWord = word;    
             }    
         }
-        console.log(wordsByLength);
         console.log("The best word is \"" + bestWord + "\".");
         var resultsDisplay = document.querySelector('.results-display');
         var table = document.createElement("table");
@@ -649,6 +665,7 @@ function analyzeBoard() {
     }
 }
 var board = null;
+var imageLoader = null;
 var boardEl = null;
 var wordHolder = null;
 var analyzer = null;
@@ -657,7 +674,6 @@ function displayBoard(boardStr) {
         setTimeout(displayBoard, 100, boardStr);
     }
     else {
-        console.log(boardStr);
         board = new Board(boardStr);
         boardEl = board.to_HTML();
         wordHolder = getWordHolder();
