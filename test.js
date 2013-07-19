@@ -1,45 +1,71 @@
-function getSimpleFile(filename) {
-    var FS = null;
-    var popWordTreeF = null;
-    var simpleFile = {read: function(){}, writer: null, stringValue: null};
-    var StorageInfo = StorageInfo || webkitStorageInfo;
-    var requestFileSystem = requestFileSystem || webkitRequestFileSystem;
-    function whenBytesGranted(grantedBytes) {
-        function onSuccess(fs) {
-            FS = fs;
-            FS.root.getFile(filename, {create: true}, function(f) {
-                f.createWriter(function(w) { simpleFile.writer = w;});
-                f.file(function(blob) {
-                    var reader = new FileReader();
-                    simpleFile.read = function(callback) {
-                        reader.readAsText(blob);
-                        reader.onloadend = function() {
-                            simpleFile.stringValue = reader.result;
-                            callback(simpleFile.stringValue);
-                        };
-                    };
-                }, function(e) {console.log(e)});
-            });
-        }
-        function onError(e) {
-            console.error(e);
-        }
-        requestFileSystem(PERSISTENT, 10000000, onSuccess, onError);
+if(Worker) {
+    var popWordTree = null;
+    var treemaker = new Worker('./treemaker.js');
+    treemaker.postMessage({wordFlag: '@'});
+    treemaker.onmessage = function(response) {
+        popWordTree = response.data;
     }
-    webkitStorageInfo.requestQuota(PERSISTENT, 10<<20, whenBytesGranted);
-    return simpleFile;
+    treemaker.onerror = function(e) {
+        console.error(e);
+    }
+    function lettersFollowing(startStr) {
+        var possibilities = tree;
+        for(var i = 0; i < startStr.length; i++) {
+            var letter = startStr[i];
+            if(possibilities[letter]) possibilities = possibilities[letter];
+            else return [];
+        }
+        delete possibilities[wordFlag];
+        return possibilities;
+    }
 }
-var wordsGameFile = getSimpleFile('words-game.txt');
-while(!wordsGameFile.read);
-var popWordTree = null;
-wordsGameFile.read(function(stringValue) {
-    popWordTree = JSON.parse(stringValue);
-})
+function createFns(popWordTree) {
+    var fns = {};
+    var wordFlag = '@';
+    function isWord(word) {
+        var subtree = popWordTree;
+        var letters = word.split('');
+        for(var l = 0; l < letters.length; l++) {
+            var letter = letters[l];
+            var subtree = subtree[letter];
+            if(!subtree) {
+                return false;
+            }
+        }
+        if(subtree[wordFlag]) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    function lettersFollowing(startStr) {
+        var subtree = popWordTree;
+        var letters = word.split('');
+        var possibilities = [];
+        for(var l = 0; l < letters.length; l++) {
+            var letter = letters[l];
+            var subtree = subtree[letter];
+            if(!subtree) {
+                return [];
+            }
+        }
+        for(var key in subtree) {
+            if(subtree.hasOwnProperty(key)) {
+                if(key !== wordFlag) {
+                    var letter = key;
+                    possibilities.push(letter);
+                }
+            }
+        }
+    }
+}
+/*
 function isPopWord(word) {
     return (/^[a-z][a-z][a-z]+$/g).test(word) 
 }
 function isWord() {}
-function createLettersFollowingFn(words) {
+function createFunctions(words) {
     var wordFlag = '@';
     function treeify(words, r) {
         var tree = {};
@@ -83,11 +109,16 @@ function createLettersFollowingFn(words) {
     else var tree = treeify(words, 22);
     console.log("words treeified", new Date().getTime());
     popWordTree = tree;
-    return lettersFollowing;
+    var funcs = {
+        lettersFollowing: lettersFollowing,
+        treeify: treeify,
+        isWord: isWord
+    };
+    return funcs;
 }
 function Board(height, width) {
+    var board = this;
     if(height instanceof Array) {
-        var board = this;
         var rows = height;
         board.height = rows.length;
         if(board.height) board.width = rows[0].length;    
@@ -100,7 +131,6 @@ function Board(height, width) {
     }
     else if(typeof height === "string") {
         var lines = height.split(/[\r\n]+/g);
-        var board = this;
         board.height = lines.length;
         board.width = lines[0].length;
         for(var y = 0; y < board.height; y++) {
@@ -111,7 +141,6 @@ function Board(height, width) {
         }
     }
     else {
-        var board = this;
         board.height = height;
         board.width = width;
         for(var y = 0; y < board.height; y++) {
@@ -211,9 +240,8 @@ function Board(height, width) {
     function getWordTiles() {
         return currentWord;
     }
-    this.to_HTML = to_HTML;
     this.DOMElement = null;
-    function to_HTML() {
+    board.to_HTML = function() {
         var node = this.DOMElement || document.createElement("div");
         node.innerHTML = '';
         for(var y = 0; y < board.height; y++) {
@@ -488,6 +516,10 @@ document.addEventListener("readystatechange", function(e) {
     }
 });
 var popWords = words.filter(isPopWord).sort();
+var fns = createFunctions();
+var lettersFollowing = fns.lettersFollowing;
+var isWord = fns.isWord;
+var treeify = fns.treeify;
 var lettersFollowing = createLettersFollowingFn(popWords);
 delete popWords;
 var letters = 
@@ -499,8 +531,6 @@ var letters =
 "shlifnha\n"+
 "fnorrieb\n"+
 "dmazhnha";
-/*
-*/
 board = new Board(letters);
 wordHolder = getWordHolder();
 function onDocumentReady() {
@@ -523,3 +553,4 @@ function onDocumentReady() {
         textarea.innerHTML = boardStr;
     }
 }
+*/
