@@ -1,23 +1,37 @@
 if(Worker) {
     var popWordTree = null;
     var treemaker = new Worker('./treemaker.js');
-    treemaker.postMessage({wordFlag: '@'});
+    var wordFlag = '@';
     treemaker.onmessage = function(response) {
         popWordTree = response.data;
+        console.log("tree built");
+        var fns = createFunctions();
+        lettersFollowing = fns.lettersFollowing;
+        isWord = fns.isWord;
     }
     treemaker.onerror = function(e) {
         console.error(e);
     }
+    /*
     function lettersFollowing(startStr) {
-        var possibilities = tree;
+        var subtree = popWordTree;
         for(var i = 0; i < startStr.length; i++) {
             var letter = startStr[i];
-            if(possibilities[letter]) possibilities = possibilities[letter];
+            if(subtree[letter]) subtree = subtree[letter];
             else return [];
         }
-        delete possibilities[wordFlag];
+        delete subtree[wordFlag];
+        var possibilities = [];
+        for(var key in subtree) {
+            if(subtree.hasOwnProperty(key)) {
+                if(key !== wordFlag) {
+                    possibilities.push(key);
+                }
+            }
+        }
         return possibilities;
     }
+    */
 }
 function createFns(popWordTree) {
     var fns = {};
@@ -59,12 +73,13 @@ function createFns(popWordTree) {
             }
         }
     }
+    fns.lettersFollowing = lettersFollowing;
+    fns.isWord = isWord;
+    return fns;
 }
-/*
 function isPopWord(word) {
     return (/^[a-z][a-z][a-z]+$/g).test(word) 
 }
-function isWord() {}
 function createFunctions(words) {
     var wordFlag = '@';
     function treeify(words, r) {
@@ -515,12 +530,9 @@ document.addEventListener("readystatechange", function(e) {
         onDocumentReady();
     }
 });
-var popWords = words.filter(isPopWord).sort();
-var fns = createFunctions();
-var lettersFollowing = fns.lettersFollowing;
-var isWord = fns.isWord;
-var treeify = fns.treeify;
-var lettersFollowing = createLettersFollowingFn(popWords);
+//var popWords = words.filter(isPopWord).sort();
+//var treeify = fns.treeify;
+//var lettersFollowing = createLettersFollowingFn(popWords);
 delete popWords;
 var letters = 
 "ehsdidne\n"+
@@ -553,4 +565,3 @@ function onDocumentReady() {
         textarea.innerHTML = boardStr;
     }
 }
-*/
