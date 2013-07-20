@@ -1,5 +1,6 @@
 body {
     cursor: default !important;
+    width: 100%;
 }
 .tile {
     display: inline-block;
@@ -49,7 +50,10 @@ div.word-container {
     font-family: sans-serif;
 }
 .results-display table {
-    border-collapse: collapse;    
+    border-collapse: collapse;
+    width: 100%;
+    height: 20%;
+    overflow-y: scroll;
 }
 .results-display table th {
     font-weight: bold;

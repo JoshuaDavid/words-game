@@ -254,10 +254,6 @@ function allowImageUpload(successCallback) {
         reader.readAsDataURL(file);
     }
 }
-window.addEventListener('load', function() {
-    allowImageUpload(displayBoard);
-    getPopWordTree(popWordTreeReceived);
-});
 function lettersFollowing() {
     return [] 
 }
@@ -324,27 +320,6 @@ function Board(height, width) {
             }
         }
     }
-    function enterWord(e) {
-        var activeTiles = document.querySelectorAll(".active");
-        for(var i = 0; i < activeTiles.length; i++) {
-            activeTiles[i].classList.remove("active");
-        }
-        if(isWord(currentWord.to_S())) {
-            for(var i = 0; i < currentWord.length; i++) {
-                currentWord[i].content = '_';
-            }
-            board.collapse();
-            board.DOMElement = board.to_HTML();
-        }
-        currentWord = [];
-        currentWord.to_S = function() {
-            var str = "";
-            for(var i = 0; i < this.length; i++) {
-                str += this[i].content;    
-            }
-            return str;
-        }
-    }
     board.collapse = function() {
         for(var i = 0; i < board.height; i++) {
             for(var y = board.height - 1; y > 0; y--) {
@@ -409,16 +384,47 @@ function Board(height, width) {
                 board[y][x].addTileToWord = addTileToWord;
                 board[y][x].removeTileFromWord = removeTileFromWord;
             }
+            row.addEventListener("touchstart", stopProp);
             row.addEventListener("mousedown", stopProp);
+
+            row.addEventListener("touchleave", stopProp);
             row.addEventListener("mouseout", stopProp);
+
+            row.addEventListener("touchenter", stopProp);
             row.addEventListener("mouseover", stopProp);
+
             node.appendChild(row);
             node.setAttribute("class", "board");
+
+            node.addEventListener("touchend", enterWord);
             node.addEventListener("mouseup", enterWord);
+
+            node.addEventListener("touchleave", enterWord);
             node.addEventListener("mouseout", enterWord);
         }
         this.DOMElement = node;
         return node;
+    }
+}
+function enterWord(e) {
+    var activeTiles = document.querySelectorAll(".active");
+    for(var i = 0; i < activeTiles.length; i++) {
+        activeTiles[i].classList.remove("active");
+    }
+    if(isWord(currentWord.to_S())) {
+        for(var i = 0; i < currentWord.length; i++) {
+            currentWord[i].content = '_';
+        }
+        board.collapse();
+        board.DOMElement = board.to_HTML();
+    }
+    currentWord = [];
+    currentWord.to_S = function() {
+        var str = "";
+        for(var i = 0; i < this.length; i++) {
+            str += this[i].content;    
+        }
+        return str;
     }
 }
 function Tile(content) {
@@ -446,6 +452,7 @@ function Tile(content) {
             r = 20;
             var beginning = true;
             possibleWords = [];
+            possibleWordTiles = [];
         }
         var allowableNeighbors = [];
         if(!wordTiles) var wordTiles = [tileObj.content];
@@ -467,18 +474,19 @@ function Tile(content) {
             newWordTiles.push(neighbor);
             var newWord = word + nc;
             if(newWord.length >= 3) {
-                if(possibleWords.indexOf(newWord) === -1) {
-                    if(isWord(newWord)) {
+                if(isWord(newWord)) {
+                    if(possibleWords.indexOf(newWord) === -1) {
+                        possibleWordTiles.push(newWordTiles);
                         possibleWords.push(newWord);
-                    }    
-                }
+                    }
+                }    
             }
             if(r >= 0) {
                 var an = neighbor.getPossibleWords(newWordTiles, r-1);
             }
         }
         if(beginning) {
-            return possibleWords;
+            return possibleWordTiles;
         }
         return allowableNeighbors;
     }
@@ -488,9 +496,17 @@ function Tile(content) {
         inner.classList.add('inner');
         inner.innerHTML = tileObj.content;
         tile.classList.add("tile");
+
+        tile.addEventListener("touchleave", stopProp);
         tile.addEventListener("mouseout", stopProp);
+        
+        tile.addEventListener("touchenter", stopProp);
         tile.addEventListener("mouseover", stopProp);
+
+        inner.addEventListener("touchstart", toggleTile);
         inner.addEventListener("mousedown", toggleTile);
+
+        inner.addEventListener("touchenter", toggleTile);
         inner.addEventListener("mouseover", toggleTile);
         function allow() {
             tile.classList.add("allowed");    
@@ -514,6 +530,7 @@ function Tile(content) {
                 }
                 //highlightAllowableNeighbors();
             }
+            e.stopPropagation();
             return false;
         }
         tileObj.toggleTile = toggleTile;
@@ -594,7 +611,7 @@ function generateAnalyzer() {
     container.appendChild(resultsDisplay);
     return container;
 }
-function analyzeBoard() {
+function analyzeBoard(start) {
     var startTime = new Date().getTime();
     var progress = document.createElement("meter");
     document.body.appendChild(progress);
@@ -641,7 +658,7 @@ function analyzeBoard() {
         thead.appendChild(lengthColHead);
         thead.appendChild(wordColHead);
         var wordColHead = document.createElement("th");
-        for(var i = 0; i < wordsByLength.length; i++) {
+        for(var i = wordsByLength.length - 1; i >= 0; i--) {
             var row = document.createElement("tr");
             var lengthCol = document.createElement("td");
             var wordCol = document.createElement("td");
@@ -664,11 +681,26 @@ function analyzeBoard() {
         console.log("Analysis took " + (endTime - startTime) * 0.001 + " seconds.");
     }
 }
+function is_touch_device() {  
+  try {  
+    document.createEvent("TouchEvent");  
+    return true;  
+  } catch (e) {  
+    return false;  
+  }  
+}
+function getWordSubmitter() {
+    var btn = document.createElement('button');
+    //btn.
+}
+var currentWord = null;
+var isTouch = null;
 var board = null;
 var imageLoader = null;
 var boardEl = null;
 var wordHolder = null;
 var analyzer = null;
+var wordSubmitter = null;
 function displayBoard(boardStr) {
     if(!popWordTree || !document.body) {
         setTimeout(displayBoard, 100, boardStr);
@@ -683,3 +715,10 @@ function displayBoard(boardStr) {
         document.body.appendChild(analyzer);
     }
 }
+window.addEventListener('load', function() {
+    isTouch = is_touch_device();
+    document.body.addEventListener('touchstart', stopProp);
+    document.body.addEventListener('touchmove', stopProp);
+    allowImageUpload(displayBoard);
+    getPopWordTree(popWordTreeReceived);
+});
