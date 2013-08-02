@@ -391,3 +391,113 @@ Bitmap.prototype.showCustomEdges = function(weightedCoordinates) {
         return newPixel;
     });
 }
+Bitmap.prototype.toBW = function(threshold) {
+    return this.map(function(pixel) {
+        var _pixel = {};
+        if(pixel.red + pixel.green + pixel.blue > threshold * 3) {
+            _pixel.red = _pixel.green = _pixel.blue = 255;
+        }
+        else {
+            _pixel.red = _pixel.green = _pixel.blue = 0;
+        }
+        _pixel.alpha = pixel.alpha;
+        return _pixel;
+    });
+}
+Bitmap.prototype.findLines = function(theta, min_length, threshold) {
+    // Finds lines of a certain length in the bitmap
+    if(!theta) theta = 0;
+    if(!min_length) min_length = 10;
+    if(!threshold) threshold = 50;
+
+    var maxline = Math.sqrt(Math.pow(this.height, 2) + Math.pow(this.width, 2));
+    var _x, _y, line;
+    var linelength = 0;
+    var lines = [];
+    for(var v = -maxline; v < maxline; v++) {
+        linelength = 0;
+        line = [];
+        for(var w = -maxline; w < maxline; w++) {
+            var x = Math.floor(v * Math.cos(theta) + w * Math.sin(theta));
+            var y = Math.floor(v * Math.sin(theta) + w * Math.cos(theta));
+            if(x == _x && y == _y) {
+                // We're looking at the same pixel.
+                continue;
+            }
+            else {
+                _x = x;
+                _y = y;
+            }
+            if(x < 0 || x >= this.width || y < 0 || y >= this.height) {
+                continue;
+            }
+            else {
+                var pixel = this.pixels[y][x];
+                if(pixel.red + pixel.green + pixel.blue > threshold * 3) {
+                    if(linelength === 0) {
+                        line = [{x: x, y: y}];
+                    }
+                    linelength += 1;
+                }
+                else {
+                    if(linelength >= min_length) {
+                        line.push({x:x, y: y});
+                        lines.push(line);
+                    }
+                    line = [];
+                    linelength = 0;
+                }
+            }
+        }
+    }
+    return lines;
+}
+Bitmap.prototype.findRegions = function() {
+    // Finds distinct (disconnected) regions on the bitmap
+    var threshold = 30;
+    var bitmap = this;
+    var edges = this.showEdges();
+    for(var y = 0; y < this.height; y++) {
+        for(var x = 0; x < this.width; x++) {
+            this.pixels[y][x].seen = false;
+        }
+    }
+    function findFullShape(x, y) {
+        var shape = [];
+        if(x < 0 || x >= this.width || y < 0 || y >= this.height) {
+            return [];
+        }
+        if(this.pixels[y][x].seen) return [];
+        bitmap.pixels[y][x].seen = true;
+        if(isInShape(x, y)) {
+            shape.push({x: x, y: y});
+            shape = shape.concat(findFullShape(x - 1, y));
+            shape = shape.concat(findFullShape(x + 1, y));
+            shape = shape.concat(findFullShape(x, y - 1));
+            shape = shape.concat(findFullShape(x, y + 1));
+        }
+        return shape;
+    }
+    function isInShape(x, y) {
+        var pixel = this.pixels[y][x];
+        if(pixel.red + pixel.green + pixel.blue > threshold * 3) {
+            return true;
+        }
+        return false;
+    }
+    var shapes = [];
+    for(var y = 0; y < this.height; y++) {
+        for(var x = 0; x < this.width; x++) {
+            try {
+                var shape = findFullShape(x, y);
+                if(shape.length) {
+                    shapes.push(shape);
+                }
+            }
+            catch(e) {
+                log(e);
+            }
+        }
+    }
+    return shapes;
+}

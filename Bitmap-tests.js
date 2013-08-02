@@ -20,7 +20,7 @@ function log(x) {
     return Q(x);
 }
 
-getImageData('http://localhost/shooter/images/zawu02w4.jpg').then(benchmark);
+getImageData('./images/IMG_0066.png').then(benchmark);
 function now() {
     return new Date().getTime();
 }
@@ -36,63 +36,76 @@ function benchmark(imageData) {
     bitmaps = [];
     canvases = [];
     time(function() {
+        log("create from ImageData");
         bitmaps[0] = new Bitmap(imageData);
     });
-    /*
     time(function() {
+        log("clone");
         bitmaps[1] = bitmaps[0].clone();
     });
     time(function() {
+        log("map (identity)");
         bitmaps[2] = bitmaps[1].map(function(pixel) {
             return pixel;
         })
     });
     time(function() {
+        log("grayscale");
         bitmaps[3] = bitmaps[2].toGrayscale();
     });
     time(function() {
+        log("to canvas");
+        canvases[0] = bitmaps[0].toCanvas();
+    });
+    time(function() {
+        log("show all edges");
         bitmaps[4] = bitmaps[0].showEdges();
     });
-    document.body.appendChild(bitmaps[4].toCanvas());
+    //document.body.appendChild(bitmaps[4].toCanvas());
     time(function() {
+        log("show vertical edges");
         bitmaps[5] = bitmaps[0].showVerticalEdges();
     });
-    document.body.appendChild(bitmaps[5].toCanvas());
+    //document.body.appendChild(bitmaps[5].toCanvas());
     time(function() {
+        log("show horizontal edges");
         bitmaps[6] = bitmaps[0].showHorizontalEdges();
     });
-    document.body.appendChild(bitmaps[6].toCanvas());
+    //document.body.appendChild(bitmaps[6].toCanvas());
     time(function() {
+        log("show diagonal edges");
         bitmaps[7] = bitmaps[0].showSW_NEEdges();
     });
-    document.body.appendChild(bitmaps[7].toCanvas());
+    //document.body.appendChild(bitmaps[7].toCanvas());
     time(function() {
+        log("show diagonal edges");
         bitmaps[8] = bitmaps[0].showSE_NWEdges();
     });
-    document.body.appendChild(bitmaps[8].toCanvas());
+    //document.body.appendChild(bitmaps[8].toCanvas());
     time(function() {
-        bitmaps[9] = bitmaps[0].showAngledEdges(0);
+        log("to black and white");
+        shapes = bitmaps[0].findRegions();
+        log(shapes);
     });
-    */
-    var ctr = document.createElement('div');
-    var k = 12;
-    for(var theta = 0; theta < Math.PI; theta+= Math.PI / k) {
-        var cnv = new Bitmap(imageData).showAngledEdges(theta).toCanvas();
-        ctr.appendChild(cnv);
-        cnv.style['display'] = "none";
-    }
-    document.body.appendChild(ctr);
-    function cycle(c) {
-        for(var i = 0; i < k; i++) {
-            ctr.children[i].style["display"] = "none";
-            if(i == c) {
-                ctr.children[i].style["display"] = "block";
-            }
-        }
-        c = (c + 1) % k;
-        setTimeout(cycle, 2000 / k, c);
-    }
-    cycle(0);
+    time(function() {
+        log("to black and white");
+        bitmaps[9] = bitmaps[0].showedges().tobw(30);
+    });
     //document.body.appendChild(bitmaps[9].toCanvas());
     log(bitmaps);
+}
+function showLines(height, width, lines) {
+    var canvas = document.createElement("canvas");
+    canvas.height = height;
+    canvas.width = width;
+    var context = canvas.getContext('2d');
+    context.strokeStyle = "red";
+    for(var i = 0; i < lines.length; i++) {
+        context.beginPath();
+        context.moveTo(lines[i][0].x, lines[i][0].y);
+        context.lineTo(lines[i][1].x, lines[i][1].y);
+        context.closePath();
+        context.stroke();
+    }
+    return canvas;
 }
