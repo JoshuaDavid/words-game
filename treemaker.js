@@ -1,4 +1,4 @@
-importScripts('./words.js');
+importscripts('./words.js');
 function isPopWord(word) {
     var word = word.toLowerCase();
     return /[a-z][a-z][a-z]+/g.test(word);
